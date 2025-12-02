@@ -1,7 +1,28 @@
 {
   "compilerOptions": {
+    // Base directory for non-relative module names
+    "baseUrl": ".",
+    // CHANGED: Use ES2022 to align with modern JavaScript and better handle ES Modules in Next.js
+    "module": "ES2022",
+    // CHANGED: Use ESNext target
+    "target": "ESNext",
+    // Enable path mapping to resolve custom module imports
     "paths": {
+      // Maps the '@/...' prefix to the project root (the directory containing this file)
       "@/*": ["./*"]
-    }
-  }
+    },
+    // Required by Next.js in jsconfig.json
+    "moduleResolution": "node",
+    "allowJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "skipLibCheck": true
+  },
+  "include": ["next-env.d.ts", "**/*.js", "**/*.jsx"],
+  "exclude": ["node_modules"]
 }
