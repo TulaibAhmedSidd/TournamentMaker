@@ -42,6 +42,6 @@ export async function GET(request, { params }) {
     }, { status: 200 });
   } catch (error) {
     console.error("Error fetching tournament data:", error);
-    return NextResponse.json({ success: false, error: 'Server error occurred while fetching tournament data.' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Server error occurred while fetching tournament data.'+error }, { status: 500 });
   }
 }
