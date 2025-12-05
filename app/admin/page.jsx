@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Plus, Users, Clock, Trophy, Shuffle, UserPlus, Zap, CheckCircle, ExternalLink, XCircle, UserCheck, Sidebar as LayoutSidebar, Sliders, List } from 'lucide-react';
+import { Loader2, Plus, Users, Clock, Trophy, Shuffle, UserPlus, Zap, CheckCircle, ExternalLink, XCircle, UserCheck, Sidebar as LayoutSidebar, Sliders, List, ChevronRight } from 'lucide-react';
 
 // Mock list of players for initial creation if the list is empty (API endpoint: /api/admin/player/init)
 const MOCK_PLAYERS = [
@@ -132,9 +132,9 @@ const MatchWinnerForm = ({ match, onWinnerRecorded }) => {
 };
 
 // ---------- Player Manager (New + Existing) ----------
-const PlayerManager = ({ game=null, gameId, gameStatus, allPlayers, onPlayerAction, registeredPlayers = [] }) => {
+const PlayerManager = ({ game = null, gameId, gameStatus, allPlayers, onPlayerAction, registeredPlayers = [] }) => {
     const [view, setView] = useState('existing');
-    console.log("game",game)
+    console.log("game", game)
     const registeredIds = useMemo(() => new Set(registeredPlayers?.map(p => p._id)), [registeredPlayers]);
     const unregisteredPlayers = useMemo(() => allPlayers?.filter(player => !registeredIds.has(player?._id)) || [], [allPlayers, registeredIds]);
 
@@ -484,15 +484,47 @@ const LastSynced = () => {
 
 
 export default function AdminPanel() {
+    let user = null;
     const [games, setGames] = useState([]);
     const [activeMatches, setActiveMatches] = useState([]);
     const [allPlayers, setAllPlayers] = useState([]);
     const [isLoadingGames, setIsLoadingGames] = useState(true);
     const [isLoadingMatches, setIsLoadingMatches] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
-
+    const [winners, setWinners] = useState([]);
+    const [error, setError] = useState(null);
+    const [userlocal, setuserlocal] = useState(null);
     const [view, setView] = useState('dashboard'); // dashboard | tournaments | players | matches | winners | settings
+    const [isAdmin, setIsAdmin] = useState(null);
+    const fetchWinners = useCallback(async () => {
+        if (isAdmin !== true) return; // Prevent fetch if not authenticated
+        setIsLoading(true);
+        setError(null);
 
+        try {
+            const response = await fetch('/api/tournament/winners');
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                setWinners(data.winners || []);
+            } else {
+                // If fetching fails during use, check for unauthorized status
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                setError(data.error || 'Failed to fetch winners data.');
+                setWinners([]);
+            }
+        } catch (err) {
+            console.error(err);
+            setError('A network error occurred while fetching winners.');
+            setWinners([]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [isAdmin]);
     const fetchAllPlayers = useCallback(async () => {
         setIsLoadingPlayers(true);
         try {
@@ -515,12 +547,12 @@ export default function AdminPanel() {
             setIsLoadingPlayers(false);
         }
     }, []);
-
     const fetchGames = useCallback(async () => {
         setIsLoadingGames(true);
         try {
             const result = await apiCall('/api/admin/game');
             const data = result?.data ?? result ?? [];
+
             setGames(Array.isArray(data) ? data : (data?.games || []));
         } catch (error) {
             console.error('Network Error fetching games:', error);
@@ -529,11 +561,10 @@ export default function AdminPanel() {
             setIsLoadingGames(false);
         }
     }, []);
-
     const bulkAdd = useCallback(async () => {
         setIsLoadingMatches(true);
         try {
-            const result = await apiCall('/api/player/bulk','POST');
+            const result = await apiCall('/api/player/bulk', 'POST');
         } catch (error) {
             console.error('Network Error fetching active matches:', error);
         } finally {
@@ -553,6 +584,57 @@ export default function AdminPanel() {
             setIsLoadingMatches(false);
         }
     }, []);
+    // quick aggregated stats
+    const stats = useMemo(() => ({
+        totalTournaments: games.length,
+        totalActiveMatches: activeMatches.length,
+        totalPlayers: allPlayers.length,
+    }), [games, activeMatches, allPlayers]);
+    // --- Authentication and Redirection Logic (Relies ONLY on HttpOnly cookie via API) ---
+    useEffect(() => {
+        const checkAuthStatus = async () => {
+            try {
+                // 1. Hit a protected API route (e.g., /api/admin/tournament/winners) to check the session cookie
+                // The browser automatically sends the HttpOnly cookie.
+                const response = await fetch('/api/tournament/winners');
+
+                if (response.ok) {
+                    // 2. Auth successful
+                    setIsAdmin(true);
+
+                    // Pre-fetch initial data if successful
+                    const data = await response.json();
+                    if (data.success) {
+                        // Assuming the winner API returns an object with a 'winners' key
+                        setWinners(data.winners || []);
+                    }
+                } else if (response.status === 401 || response.status === 403) {
+                    // 3. Unauthorized/Forbidden -> Redirect to login page
+                    setIsAdmin(false);
+                    // Crucial: Client-side redirection to the login route
+                    window.location.href = '/admin/login';
+                } else {
+                    // Other server error during check
+                    setIsAdmin(false);
+                    setError("Server error during initial auth check.");
+                }
+            } catch (err) {
+                // 4. Network error, assume unauthenticated and redirect
+                setIsAdmin(false);
+                window.location.href = '/admin/login';
+                console.error("Auth check failed:", err);
+            }
+        };
+        // Only run the auth check on mount
+        checkAuthStatus();
+    }, []);
+    useEffect(() => {
+        if (typeof window != 'undefined') {
+            user = localStorage.getItem('user')
+            user = user ? JSON.parse(user) : null
+            setuserlocal(user)
+        }
+    }, [user])
 
     useEffect(() => {
         fetchAllPlayers();
@@ -564,13 +646,49 @@ export default function AdminPanel() {
         fetchAllPlayers(); fetchGames(); fetchActiveMatches();
     }, [fetchAllPlayers, fetchGames, fetchActiveMatches]);
 
-    // quick aggregated stats
-    const stats = useMemo(() => ({
-        totalTournaments: games.length,
-        totalActiveMatches: activeMatches.length,
-        totalPlayers: allPlayers.length,
-    }), [games, activeMatches, allPlayers]);
 
+
+    useEffect(() => {
+        if (view === 'winners') {
+            fetchWinners();
+        }
+    }, [view, fetchWinners]);
+
+    // useEffect(() => {
+    //     if (!userlocal && user != null) {
+    //         window.location.replace('/admin/login')
+    //     }
+    // }, [userlocal,user]);
+
+    const WinnerRow = ({ winner }) => (
+        <div className="grid grid-cols-12 gap-4 items-center py-4 border-b last:border-b-0 hover:bg-indigo-50 transition-colors duration-150">
+            <div className="col-span-4 font-semibold text-indigo-700 truncate">{winner.tournamentName}</div>
+            <div className="col-span-3 text-sm text-gray-500">
+                {console.log("winner", winner)}
+                {new Date(winner.scheduledTime).toLocaleString()}
+            </div>
+            <div className="col-span-4 flex items-center">
+                <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
+                <span className="font-bold text-gray-800 truncate">
+                    {/* Check if winner object and name exist */}
+                    {winner.winner?.name || winner.winner?.email || 'TBD/N/A'}
+                </span>
+            </div>
+            <div className="col-span-1 text-right">
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+            </div>
+        </div>
+    );
+    console.log("userlocal", userlocal)
+
+    const logout = async () => {
+        localStorage.clear();
+        sessionStorage.clear();
+        const response = await apiCall('/api/admin/logout','POST',{});
+        if (response) {
+            window.location.replace('/admin/login')
+        }
+    }
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
             <div className="max-w-[1200px] mx-auto grid grid-cols-12 gap-6">
@@ -618,6 +736,10 @@ export default function AdminPanel() {
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="text-right">
+                                <div className='flex items-center gap-2 mb-1' >
+                                    <p className="text-xs text-gray-500">Welcome, {userlocal?.name}</p>
+                                    <button onClick={logout} className="px-3 py-1 bg-red-600 text-white rounded-md text-sm">logout</button>
+                                </div>
                                 <p className="text-xs text-gray-500">Total Players</p>
                                 <p className="text-lg font-semibold text-indigo-600">{isLoadingPlayers ? (<span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading</span>) : stats.totalPlayers}</p>
                             </div>
@@ -712,9 +834,47 @@ export default function AdminPanel() {
                     {view === 'winners' && (
                         <div className="space-y-6">
                             <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                                <h2 className="text-xl font-bold">Winners & Results</h2>
-                                <p className="text-sm text-gray-600 mt-2">Completed matches and champions will appear here (backend support required).</p>
-                                {/* Placeholder: implement winners endpoint and UI when available */}
+                                <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                                    <Trophy className="w-6 h-6 mr-3 text-yellow-500" /> Tournament Champions
+                                </h2>
+                                <p className="text-sm text-gray-600 mt-2 mb-6">A list of all completed tournaments and their official winners.</p>
+
+                                {isLoading && (
+                                    <div className="flex justify-center items-center py-12">
+                                        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                                        <p className="ml-3 text-indigo-600">Loading winners...</p>
+                                    </div>
+                                )}
+
+                                {error && (
+                                    <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+                                        Error: {error}
+                                    </div>
+                                )}
+
+                                {!isLoading && !error && winners.length > 0 && (
+                                    <>
+                                        <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500 uppercase border-b pb-2 mb-2">
+                                            <div className="col-span-4">Tournament Name</div>
+                                            <div className="col-span-3">Start Date</div>
+                                            <div className="col-span-4">Winner</div>
+                                            <div className="col-span-1"></div>
+                                        </div>
+                                        <div className="divide-y divide-gray-100">
+                                            {winners.map((winner) => (
+                                                <WinnerRow key={winner.tournamentId} winner={winner} />
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                {!isLoading && !error && winners.length === 0 && (
+                                    <div className="text-center py-10 text-gray-500">
+                                        <Trophy className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+                                        <p className="font-semibold">No Champions Yet</p>
+                                        <p className="text-sm">Completed tournaments with a final winner will appear here.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

@@ -1,3 +1,4 @@
+import isAdminAuthenticated from '@/app/lib/authChecker';
 import dbConnect from '@/app/lib/db';
 import Game from '@/app/models/Game';
 import { NextResponse } from 'next/server';
@@ -6,7 +7,17 @@ import { NextResponse } from 'next/server';
  * Handles GET request to fetch all games/tournaments.
  * Used by the Admin list view.
  */
-export async function GET() {
+export async function GET(request) {
+    if (!isAdminAuthenticated(request)) {
+        // Log the unauthorized attempt (optional)
+        console.warn('Unauthorized attempt to access Admin Winners API');
+
+        // Return 401 Unauthorized immediately if the user is not authenticated
+        return NextResponse.json({
+            success: false,
+            error: 'Unauthorized: Admin privileges required.'
+        }, { status: 401 });
+    }
     await dbConnect();
 
     try {
@@ -27,7 +38,7 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        
+
         // Ensure scheduledTime is a valid Date object
         if (body.scheduledTime) {
             body.scheduledTime = new Date(body.scheduledTime);

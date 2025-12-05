@@ -11,6 +11,11 @@ const UserSchema = new mongoose.Schema({
     required: [true, 'Please provide an email.'],
     unique: true,
   },
+  password: {
+    type: String,
+    required: [true, 'Please provide an pass.'],
+    default:'12345'
+  },
   // Role differentiation: True for Admin, False for Player
   isAdmin: {
     type: Boolean,
