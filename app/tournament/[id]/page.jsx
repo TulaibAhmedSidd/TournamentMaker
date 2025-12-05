@@ -88,7 +88,7 @@ const App = ({ params }) => {
             </div>
         );
     }
-
+    console.log("error",error)
     if (error) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-900 p-8">

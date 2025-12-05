@@ -1,6 +1,7 @@
 import dbConnect from '@/app/lib/db';
 import Game from '@/app/models/Game';
 import Match from '@/app/models/Match';
+import User from '@/app/models/User'; // <-- ADDED: Need to import the User model to ensure it is registered with Mongoose
 import { NextResponse } from 'next/server';
 
 // GET /api/tournament/[id] - Get comprehensive data for a single tournament (game and all matches)
@@ -12,9 +13,10 @@ export async function GET(request, { params }) {
     const game = await Game.findById(gameId)
         .populate({
             path: 'registeredPlayers',
-            select: 'name' // Only need player name for the bracket
+            model: 'User', // <-- FIX: Explicitly use the 'User' model to populate player data
+            select: 'name'
         })
-        .select('-__v'); // Exclude mongoose internal version key
+        .select('-__v');
 
     if (!game) {
       return NextResponse.json({ success: false, error: 'Tournament not found.' }, { status: 404 });
@@ -24,10 +26,12 @@ export async function GET(request, { params }) {
     const matches = await Match.find({ game: gameId })
         .populate({
             path: 'participants',
+            model: 'User', // <-- FIX: Explicitly use 'User' model for participants
             select: 'name'
         })
         .populate({
             path: 'winner',
+            model: 'User', // <-- FIX: Explicitly use 'User' model for the winner
             select: 'name'
         })
         .sort({ round: 1, scheduledTime: 1 })
@@ -42,6 +46,10 @@ export async function GET(request, { params }) {
     }, { status: 200 });
   } catch (error) {
     console.error("Error fetching tournament data:", error);
-    return NextResponse.json({ success: false, error: 'Server error occurred while fetching tournament data.'+error }, { status: 500 });
+    // Updated status to 500 (Internal Server Error) and included the error message for better debugging
+    return NextResponse.json({ 
+        success: false, 
+        error: `Server error occurred while fetching tournament data: ${error.message || error}` 
+    }, { status: 500 });
   }
 }
