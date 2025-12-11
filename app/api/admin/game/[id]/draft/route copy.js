@@ -24,27 +24,16 @@ export async function POST(request, { params }) {
             return NextResponse.json({ success: false, error: `Drafting is only allowed when status is 'Registration Open' or 'Drafting'. Current status: ${game.status}` }, { status: 400 });
         }
         
-        // --- NEW LOGIC: DETERMINE TEAM SIZE ---
-        const teamSizeMatch = game.matchFormat.match(/^(\d+)v\d+$/);
-        const teamSize = teamSizeMatch ? parseInt(teamSizeMatch[1]) : 1; // e.g., '2' from '2v2'
-        
         const playerIds = game.registeredPlayers.map(id => id.toString());
-
-        // New Validation: Ensure enough players and they are a multiple of team size
-        if (playerIds.length < teamSize * 2) {
-             return NextResponse.json({ success: false, error: `Cannot draft: Need at least ${teamSize * 2} players for a ${game.matchFormat} tournament.` }, { status: 400 });
+        if (playerIds.length < 2) {
+             return NextResponse.json({ success: false, error: 'Cannot draft: Less than 2 players registered.' }, { status: 400 });
         }
-        if (playerIds.length % teamSize !== 0) {
-            return NextResponse.json({ success: false, error: `Cannot draft: Total players (${playerIds.length}) must be a multiple of the team size (${teamSize}) for ${game.matchFormat}.` }, { status: 400 });
-        }
-        // --- END NEW LOGIC ---
 
         // Execute the core logic to create the matches
         const matchesCreated = await createFirstRound(
             gameId, 
             playerIds, 
-            game.scheduledTime,
-            teamSize // <--- Pass the determined team size
+            game.scheduledTime
         );
 
         return NextResponse.json({ 

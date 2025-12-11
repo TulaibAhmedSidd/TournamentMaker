@@ -37,7 +37,6 @@ export async function PATCH(request, { params }) {
         }
         
         // Ensure the recorded winner is actually a participant
-        // This validation is still correct, as the frontend sends the ID of one representative player from the winning team.
         if (!match.participants.map(p => p.toString()).includes(winnerId)) {
              return NextResponse.json({ success: false, error: 'The winner is not a participant in this match.' }, { status: 400 });
         }
@@ -52,7 +51,6 @@ export async function PATCH(request, { params }) {
         );
 
         // 3. Check for bracket advancement in the parent game
-        // This call relies on the logic in /lib/tournament-logic.js to correctly handle team advancement.
         const advancementResult = await advanceBracket(match.game.toString());
 
         // 4. Compile response message

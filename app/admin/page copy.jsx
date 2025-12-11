@@ -56,39 +56,12 @@ const StatCard = ({ title, value, icon: Icon, small }) => (
         </div>
     </div>
 );
-const getTeamDetails = (match) => {
-    const format = match.game?.matchFormat;
-    // Extract team size (e.g., '2' from '2v2')
-    const teamSizeMatch = format?.match(/^(\d+)v\d+$/);
-    const teamSize = teamSizeMatch ? parseInt(teamSizeMatch[1]) : 1;
-    
-    if (!match.participants || match.participants.length < teamSize) {
-        return { teamSize: 1, team1: [], team2: [], team1Name: 'TBD', team2Name: 'TBD' };
-    }
 
-    // Participants are grouped sequentially in the DB: [PlayerA, PlayerB, PlayerC, PlayerD]
-    // where A/B is Side 1 and C/D is Side 2 (for 2v2).
-    const team1 = match.participants.slice(0, teamSize);
-    const team2 = match.participants.slice(teamSize, teamSize * 2);
-
-    const formatTeamName = (team) => team.map(p => p.name).join(', ');
-
-    return {
-        teamSize,
-        team1,
-        team2,
-        team1Name: formatTeamName(team1),
-        // If it's a bye match, team2 will be empty, so we handle the name display here.
-        team2Name: formatTeamName(team2.length > 0 ? team2 : []),
-    };
-};
 // ---------- Match Winner Form ----------
 const MatchWinnerForm = ({ match, onWinnerRecorded }) => {
-    const [selectedWinnerId, setSelectedWinnerId] = useState(''); // Stores 'team1' or 'team2'
+    const [selectedWinnerId, setSelectedWinnerId] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState('');
-
-    const { teamSize, team1, team2, team1Name, team2Name } = getTeamDetails(match);
 
     useEffect(() => {
         // reset when match changes
@@ -99,29 +72,15 @@ const MatchWinnerForm = ({ match, onWinnerRecorded }) => {
     const handleSubmitWinner = async (e) => {
         e.preventDefault();
         if (!selectedWinnerId) {
-            setMessage('Please select a winning side.');
+            setMessage('Please select a winner.');
             return;
         }
 
         setIsLoading(true);
         setMessage('');
-        
-        // Determine the single representative ID to send to the backend.
-        // The backend expects ONE winner ID, which it uses to infer the winning team.
-        let representativeWinnerId;
-        if (selectedWinnerId === 'team1' && team1.length > 0) {
-            representativeWinnerId = team1[0]._id; // Use first player's ID from team 1
-        } else if (selectedWinnerId === 'team2' && team2.length > 0) {
-            representativeWinnerId = team2[0]._id; // Use first player's ID from team 2
-        } else {
-             setMessage('Invalid team selection or empty team.');
-             setIsLoading(false);
-             return;
-        }
-
 
         const endpoint = `/api/admin/match/${match._id}/winner`;
-        const data = { winnerId: representativeWinnerId };
+        const data = { winnerId: selectedWinnerId };
 
         try {
             const result = await apiCall(endpoint, 'PATCH', data);
@@ -141,10 +100,10 @@ const MatchWinnerForm = ({ match, onWinnerRecorded }) => {
     };
 
     if (match?.isBye) {
-        // For bye matches, team1Name will contain the player names
+        const byePlayer = match.participants?.[0];
         return (
             <div className="flex justify-between items-center text-sm text-gray-600 mt-3 pt-3 border-t border-gray-100">
-                <span className="font-semibold text-indigo-500">{team1Name} (Bye)</span>
+                <span className="font-semibold text-indigo-500">{byePlayer?.name} (Bye)</span>
                 <span className="flex items-center text-green-600 font-medium">
                     <CheckCircle className="w-4 h-4 mr-1" /> Auto-Completed
                 </span>
@@ -154,15 +113,11 @@ const MatchWinnerForm = ({ match, onWinnerRecorded }) => {
 
     return (
         <form onSubmit={handleSubmitWinner} className="flex flex-col space-y-2 sm:flex-row sm:space-x-3 items-center w-full mt-3 pt-3 border-t border-gray-100">
-            <select 
-                value={selectedWinnerId} 
-                onChange={(e) => { setSelectedWinnerId(e.target.value); setMessage(''); }} 
-                required 
-                className="w-full sm:w-1/3 p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
-            >
-                <option value="">Select Winning Side</option>
-                {team1.length > 0 && <option value="team1">{team1Name}</option>}
-                {team2.length > 0 && <option value="team2">{team2Name}</option>}
+            <select value={selectedWinnerId} onChange={(e) => { setSelectedWinnerId(e.target.value); setMessage(''); }} required className="w-full sm:w-1/3 p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                <option value="">Select Winner</option>
+                {match.participants?.map(player => (
+                    <option key={player._id} value={player._id}>{player.name}</option>
+                ))}
             </select>
 
             <button type="submit" disabled={isLoading || !selectedWinnerId} className="w-full sm:w-auto flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition duration-150 shadow-md">
@@ -434,7 +389,7 @@ const GameActions = ({ game, onActionComplete }) => {
 };
 
 // ---------- Game List ----------
-const GameList = ({ games = [], isLoading, refetchAllData, fetchActiveMatches, allPlayers, deleteTournament }) => {
+const GameList = ({ games = [], isLoading, refetchAllData, fetchActiveMatches, allPlayers }) => {
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2"><Trophy className="w-5 h-5 text-green-600" /> Existing Tournaments ({games.length})</h2>
@@ -457,9 +412,6 @@ const GameList = ({ games = [], isLoading, refetchAllData, fetchActiveMatches, a
                                     </div>
                                 </div>
                                 <span className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ${game.status === 'Registration Open' ? 'bg-green-100 text-green-800' : game.status === 'Active' ? 'bg-yellow-100 text-yellow-800' : game.status === 'Completed' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}`}>{game.status}</span>
-                                <span className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-red-700 text-white ml-2 cursor-pointer`}
-                                onClick={()=>deleteTournament(game._id)}
-                                >{'Delete tournament'}</span>
                             </div>
 
                             <PlayerManager game={game} gameId={game._id} gameStatus={game.status} allPlayers={allPlayers} onPlayerAction={refetchAllData} registeredPlayers={game.registeredPlayers || []} />
@@ -476,8 +428,6 @@ const GameList = ({ games = [], isLoading, refetchAllData, fetchActiveMatches, a
 };
 
 // ---------- Active Match List ----------
-
-// ---------- Active Match List (Display Update) ----------
 const ActiveMatchList = ({ activeMatches = [], isLoading, fetchActiveMatches }) => {
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 mt-8">
@@ -489,27 +439,20 @@ const ActiveMatchList = ({ activeMatches = [], isLoading, fetchActiveMatches }) 
                 <p className="text-gray-500 italic">No matches currently scheduled or active. Draft a game to begin!</p>
             ) : (
                 <div className="space-y-4">
-                    {activeMatches.map(match => {
-                        const { team1Name, team2Name } = getTeamDetails(match);
-                        
-                        return (
-                            <div key={match._id} className="p-4 border border-red-200 rounded-lg bg-red-50 hover:bg-red-100 transition duration-150">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-grow">
-                                        <p className="text-md font-bold text-red-700">Round {match.round} - {match.game?.name}</p>
-                                        
-                                        {/* UPDATED: Display teams instead of individual player names */}
-                                        <p className="text-lg font-semibold text-gray-800">{team1Name} vs {team2Name}</p>
-                                        
-                                        <div className="flex text-sm text-gray-600 mt-1"><span className="flex items-center"><Clock className="w-4 h-4 mr-1 text-yellow-600" /> {new Date(match.scheduledTime).toLocaleString()}</span></div>
-                                    </div>
-                                    <span className="px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-red-200 text-red-800">AWAITING RESULT</span>
+                    {activeMatches.map(match => (
+                        <div key={match._id} className="p-4 border border-red-200 rounded-lg bg-red-50 hover:bg-red-100 transition duration-150">
+                            <div className="flex justify-between items-start">
+                                <div className="flex-grow">
+                                    <p className="text-md font-bold text-red-700">Round {match.round} - {match.game?.name}</p>
+                                    <p className="text-lg font-semibold text-gray-800">{match.participants?.map(p => p.name).join(' vs ')}</p>
+                                    <div className="flex text-sm text-gray-600 mt-1"><span className="flex items-center"><Clock className="w-4 h-4 mr-1 text-yellow-600" /> {new Date(match.scheduledTime).toLocaleString()}</span></div>
                                 </div>
-
-                                <MatchWinnerForm match={match} onWinnerRecorded={fetchActiveMatches} />
+                                <span className="px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-red-200 text-red-800">AWAITING RESULT</span>
                             </div>
-                        );
-                    })}
+
+                            <MatchWinnerForm match={match} onWinnerRecorded={fetchActiveMatches} />
+                        </div>
+                    ))}
                 </div>
             )}
         </div>
@@ -746,13 +689,6 @@ export default function AdminPanel() {
             window.location.replace('/admin/login')
         }
     }
-
-    const deleteTournament =async (gameID)=>{
-        const response = await apiCall('/api/admin/game/'+gameID,'DELETE',{});
-        if (response) {
-            fetchGames(); 
-        }
-    }
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
             <div className="max-w-[1200px] mx-auto grid grid-cols-12 gap-6">
@@ -847,7 +783,7 @@ export default function AdminPanel() {
 
                             <ActiveMatchList activeMatches={activeMatches} isLoading={isLoadingMatches} fetchActiveMatches={refetchAllData} />
 
-                            <GameList deleteTournament={deleteTournament} games={games} isLoading={isLoadingGames} refetchAllData={refetchAllData} fetchActiveMatches={fetchActiveMatches} allPlayers={allPlayers} />
+                            <GameList games={games} isLoading={isLoadingGames} refetchAllData={refetchAllData} fetchActiveMatches={fetchActiveMatches} allPlayers={allPlayers} />
 
                         </div>
                     )}
@@ -855,7 +791,7 @@ export default function AdminPanel() {
                     {view === 'tournaments' && (
                         <div className="space-y-6">
                             <GameForm onGameCreated={refetchAllData} />
-                            <GameList deleteTournament={deleteTournament} games={games} isLoading={isLoadingGames} refetchAllData={refetchAllData} fetchActiveMatches={fetchActiveMatches} allPlayers={allPlayers} />
+                            <GameList games={games} isLoading={isLoadingGames} refetchAllData={refetchAllData} fetchActiveMatches={fetchActiveMatches} allPlayers={allPlayers} />
                         </div>
                     )}
 
