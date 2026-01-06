@@ -17,10 +17,13 @@ export async function GET() {
     }
 
     // Return the list of players
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       count: players.length,
-      players 
+      players,
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      }
     }, { status: 200 });
 
   } catch (error) {

@@ -47,7 +47,10 @@ export async function GET(request, { params }) {
       success: true,
       data: {
         game: game,
-        matches: matches
+        matches: matches,
+        headers: {
+          'Cache-Control': 'no-store, max-age=0',
+        }
       }
     }, { status: 200 });
   } catch (error) {

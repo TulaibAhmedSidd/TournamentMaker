@@ -32,7 +32,12 @@ export async function GET(request) {
       })
       .sort({ 'game.scheduledTime': 1, round: 1 }); // Sort by game time and round
 
-    return NextResponse.json({ success: true, data: matches }, { status: 200 });
+    return NextResponse.json({
+      success: true, data: matches,
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      }
+    }, { status: 200 });
   } catch (error) {
     console.error("Error fetching active matches:", error);
     return NextResponse.json({ success: false, error: 'Failed to fetch active matches.' }, { status: 500 });

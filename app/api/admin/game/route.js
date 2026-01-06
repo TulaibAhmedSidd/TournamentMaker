@@ -45,7 +45,12 @@ export async function POST(request) {
         }
 
         const game = await Game.create(body);
-        return NextResponse.json({ success: true, data: game }, { status: 201 });
+        return NextResponse.json({
+            success: true, data: game,
+            headers: {
+                'Cache-Control': 'no-store, max-age=0',
+            }
+        }, { status: 201 });
     } catch (error) {
         console.error('Error creating game:', error);
         // Mongoose validation errors

@@ -12,7 +12,7 @@ export async function PATCH(request, { params }) {
     const { winnerId } = await request.json();
 
     if (!winnerId) {
-        return NextResponse.json({ success: false, error: 'Winner ID is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Winner ID is required.' }, { status: 400 });
     }
 
     const match = await Match.findById(matchId);
@@ -22,13 +22,13 @@ export async function PATCH(request, { params }) {
 
     // 1. Validation: Check if the match is not already completed
     if (match.status === 'Completed') {
-        return NextResponse.json({ success: false, error: 'Match is already completed. Cannot change winner.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Match is already completed. Cannot change winner.' }, { status: 400 });
     }
-    
+
     // 2. Validation: Check if the winner is one of the participants
     // We convert participant IDs to strings for robust comparison with the winnerId string
     if (!match.participants.map(id => id.toString()).includes(winnerId)) {
-        return NextResponse.json({ success: false, error: 'Winner must be one of the participants in this match.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Winner must be one of the participants in this match.' }, { status: 400 });
     }
 
     // 3. Update the match
@@ -36,10 +36,13 @@ export async function PATCH(request, { params }) {
     match.status = 'Completed';
     await match.save();
 
-    return NextResponse.json({ 
-        success: true, 
-        message: `Winner recorded for match ID ${matchId}.`, 
-        data: match 
+    return NextResponse.json({
+      success: true,
+      message: `Winner recorded for match ID ${matchId}.`,
+      data: match,
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      }
     }, { status: 200 });
 
   } catch (error) {

@@ -27,27 +27,27 @@ export async function PATCH(request, { params }) {
     try {
         // 1. Find the match and validate winner
         const match = await Match.findById(matchId);
-        
+
         if (!match) {
             return NextResponse.json({ success: false, error: 'Match not found.' }, { status: 404 });
         }
-        
+
         if (match.status === 'Completed') {
             return NextResponse.json({ success: false, error: 'Match is already completed.' }, { status: 400 });
         }
-        
+
         // Ensure the recorded winner is actually a participant
         // This validation is still correct, as the frontend sends the ID of one representative player from the winning team.
         if (!match.participants.map(p => p.toString()).includes(winnerId)) {
-             return NextResponse.json({ success: false, error: 'The winner is not a participant in this match.' }, { status: 400 });
+            return NextResponse.json({ success: false, error: 'The winner is not a participant in this match.' }, { status: 400 });
         }
 
         // 2. Update the match record
-        const updatedMatch = await Match.findByIdAndUpdate(matchId, 
-            { 
-                winner: new mongoose.Types.ObjectId(winnerId), 
-                status: 'Completed' 
-            }, 
+        const updatedMatch = await Match.findByIdAndUpdate(matchId,
+            {
+                winner: new mongoose.Types.ObjectId(winnerId),
+                status: 'Completed'
+            },
             { new: true }
         );
 
@@ -59,10 +59,13 @@ export async function PATCH(request, { params }) {
         let responseMessage = `Match ${updatedMatch.matchNumber} (Round ${updatedMatch.round}) completed! `;
         responseMessage += advancementResult.message;
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             message: responseMessage,
-            advancement: advancementResult
+            advancement: advancementResult,
+            headers: {
+                'Cache-Control': 'no-store, max-age=0',
+            }
         }, { status: 200 });
 
     } catch (error) {

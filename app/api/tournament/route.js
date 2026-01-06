@@ -22,16 +22,19 @@ export async function GET() {
       playerCount: game.registeredPlayers ? game.registeredPlayers.length : 0, // Get the count
     }));
 
-    return NextResponse.json({ 
-        success: true, 
-        tournaments: tournamentList 
+    return NextResponse.json({
+      success: true,
+      tournaments: tournamentList,
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      }
     }, { status: 200 });
 
   } catch (error) {
     console.error("Error fetching all tournaments:", error);
-    return NextResponse.json({ 
-        success: false, 
-        error: 'Server error occurred while fetching tournaments.' 
+    return NextResponse.json({
+      success: false,
+      error: 'Server error occurred while fetching tournaments.'
     }, { status: 500 });
   }
 }

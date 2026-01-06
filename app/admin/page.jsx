@@ -23,6 +23,7 @@ const apiCall = async (endpoint, method = 'GET', data = null) => {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: data ? JSON.stringify(data) : null,
+        cache: 'no-store' 
     };
 
     const res = await fetch(endpoint, options);
@@ -560,7 +561,7 @@ export default function AdminPanel() {
         setError(null);
 
         try {
-            const response = await fetch('/api/tournament/winners');
+            const response = await fetch('/api/tournament/winners', { cache: 'no-store' });
             const data = await response.json();
 
             if (response.ok && data.success) {
@@ -653,7 +654,7 @@ export default function AdminPanel() {
             try {
                 // 1. Hit a protected API route (e.g., /api/admin/tournament/winners) to check the session cookie
                 // The browser automatically sends the HttpOnly cookie.
-                const response = await fetch('/api/tournament/winners');
+                const response = await fetch('/api/tournament/winners',{ cache: 'no-store' });
 
                 if (response.ok) {
                     // 2. Auth successful

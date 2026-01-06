@@ -59,7 +59,10 @@ export async function GET(request) {
         return NextResponse.json({
             success: true,
             count: winnersList.length,
-            winners: winnersList
+            winners: winnersList,
+            headers: {
+                'Cache-Control': 'no-store, max-age=0',
+            }
         }, { status: 200 });
 
     } catch (error) {

@@ -146,7 +146,7 @@ const App = ({ params }) => {
 
             for (let i = 0; i < 3; i++) {
                 try {
-                    const response = await fetch(apiEndpoint);
+                    const response = await fetch(apiEndpoint,{ cache: 'no-store' });
 
                     if (!response.ok) {
                         const errorBody = await response.json().catch(() => ({ message: 'Unknown server error.' }));

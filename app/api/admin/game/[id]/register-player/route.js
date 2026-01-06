@@ -7,17 +7,17 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 
 
-const  DEFAULT_PLAYER_PASSWORD = '12345'
+const DEFAULT_PLAYER_PASSWORD = '12345'
 
 async function findOrCreateUser(email, name) {
   let user = await User.findOne({ email });
   if (!user) {
     const hashedPassword = await bcrypt.hash(DEFAULT_PLAYER_PASSWORD, 10);
-    user = await User.create({ 
-        email, 
-        name, 
-        password: hashedPassword, // Set the hashed default password
-        isAdmin: false 
+    user = await User.create({
+      email,
+      name,
+      password: hashedPassword, // Set the hashed default password
+      isAdmin: false
     });
   }
   return user;
