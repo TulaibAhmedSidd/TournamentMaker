@@ -2,6 +2,8 @@ import dbConnect from '@/app/lib/db';
 import Game from '@/app/models/Game'; // Assuming this is your Mongoose model for tournaments
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/tournament - Fetch all tournaments
 export async function GET() {
   await dbConnect();

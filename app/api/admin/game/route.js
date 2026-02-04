@@ -3,6 +3,8 @@ import dbConnect from '@/app/lib/db';
 import Game from '@/app/models/Game';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Handles GET request to fetch all games/tournaments.
  * Used by the Admin list view.

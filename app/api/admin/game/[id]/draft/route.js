@@ -30,12 +30,25 @@ export async function POST(request, { params }) {
 
         const playerIds = game.registeredPlayers.map(id => id.toString());
 
-        // New Validation: Ensure enough players and they are a multiple of team size
-        if (playerIds.length < teamSize * 2) {
-            return NextResponse.json({ success: false, error: `Cannot draft: Need at least ${teamSize * 2} players for a ${game.matchFormat} tournament.` }, { status: 400 });
+        // New Validation: Ensure enough players based on format
+        let minPlayers = 2;
+        if (game.matchFormat === '1v1') minPlayers = 2;
+        else if (game.matchFormat === '2v2') minPlayers = 4;
+        else if (game.matchFormat === '4v4') minPlayers = 8;
+        else if (game.matchFormat === '8v8') minPlayers = 16;
+
+        if (playerIds.length < minPlayers) {
+            return NextResponse.json({
+                success: false,
+                error: `Cannot draft: Need at least ${minPlayers} players for a ${game.matchFormat} tournament. Currently have ${playerIds.length}.`
+            }, { status: 400 });
         }
+
         if (playerIds.length % teamSize !== 0) {
-            return NextResponse.json({ success: false, error: `Cannot draft: Total players (${playerIds.length}) must be a multiple of the team size (${teamSize}) for ${game.matchFormat}.` }, { status: 400 });
+            return NextResponse.json({
+                success: false,
+                error: `Cannot draft: Total players (${playerIds.length}) must be a multiple of the team size (${teamSize}) for ${game.matchFormat}.`
+            }, { status: 400 });
         }
         // --- END NEW LOGIC ---
 

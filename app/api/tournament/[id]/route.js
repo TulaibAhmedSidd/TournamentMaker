@@ -4,6 +4,8 @@ import Match from '@/app/models/Match';
 import User from '@/app/models/User';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/tournament/[id] - Get comprehensive data for a single tournament (game and all matches)
 export async function GET(request, { params }) {
   await dbConnect();

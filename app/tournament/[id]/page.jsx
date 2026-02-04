@@ -7,45 +7,49 @@ import { Users, Calendar, Trophy, Zap, Loader2, LinkIcon, AlertTriangle, ArrowRi
 
 // Stat Card
 const StatCard = ({ icon: Icon, title, value }) => (
-    <div className="flex items-center p-4 bg-white/10 rounded-xl shadow-lg transition duration-300 hover:bg-white/20">
-        <Icon className="w-6 h-6 text-indigo-400 mr-4" />
+    <div className="flex items-center p-6 bg-brand-surface rounded-2xl shadow-sm border border-brand transition duration-300 hover:shadow-md">
+        <div className="p-3 rounded-xl bg-brand-background text-brand-primary mr-4">
+            <Icon className="w-6 h-6 border-brand-primary" />
+        </div>
         <div>
-            <p className="text-sm font-medium text-gray-300">{title}</p>
-            <p className="text-2xl font-bold text-white">{value}</p>
+            <p className="text-xs font-bold text-brand-muted uppercase tracking-wider">{title}</p>
+            <p className="text-xl font-black text-brand-text">{value}</p>
         </div>
     </div>
 );
 
-// Team Display
 const TeamDisplay = ({ team, winnerId, matchStatus }) => {
     const teamNames = team.map(p => p.name).join(' & ');
     const isWinner = team.some(p => p._id === winnerId);
 
     return (
-        <div className="flex items-center truncate">
+        <div className="flex items-center min-w-0 group/team relative">
             <span
-                className={`text-lg font-semibold truncate ${
-                    isWinner && matchStatus === 'Completed' ? 'text-yellow-300' : 'text-white'
-                }`}
-                title={teamNames}
+                className={`text-base font-bold truncate transition-colors ${isWinner && matchStatus === 'Completed' ? 'text-brand-primary' : 'text-brand-text'
+                    }`}
             >
                 {teamNames}
             </span>
             {isWinner && matchStatus === 'Completed' && (
-                <Trophy className="w-4 h-4 text-yellow-400 ml-2 flex-shrink-0" />
+                <Trophy className="w-4 h-4 text-brand-accent ml-2 flex-shrink-0 animate-bounce" />
             )}
+            {/* Hover Tooltip for Full Team Names */}
+            <div className="absolute bottom-full left-0 mb-2 hidden group-hover/team:block z-50">
+                <div className="bg-brand-text text-brand-surface text-[10px] font-bold py-1 px-2 rounded shadow-lg whitespace-nowrap">
+                    {teamNames}
+                </div>
+            </div>
         </div>
     );
 };
 
-// Match Card
 const MatchCard = ({ match, index, matchFormat }) => {
     const participants = match.participants || [];
     const winnerId = match.winner?._id;
 
     let team1 = [];
     let team2 = [];
-    const expectedPlayers = matchFormat === '2v2' ? 4 : 2;
+    const expectedPlayers = matchFormat === '2v2' ? 4 : (matchFormat === '4v4' ? 8 : 2);
 
     if (participants.length === expectedPlayers) {
         const half = participants.length / 2;
@@ -59,70 +63,77 @@ const MatchCard = ({ match, index, matchFormat }) => {
     const isCompleted = match.status === 'Completed';
 
     return (
-        <div className="flex flex-col justify-between p-4 bg-gray-700 rounded-xl shadow-md mb-4 transition hover:bg-gray-600 border-l-4 border-indigo-500">
-            <div className="flex items-center justify-between">
-                <div className="text-sm font-mono text-gray-400">Round {match.round} | Match {match.matchNumber}</div>
+        <div className="flex flex-col p-5 bg-brand-surface rounded-2xl shadow-sm border border-brand mb-4 transition hover:border-brand-primary group">
+            <div className="flex items-center justify-between mb-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-brand-muted px-2 py-0.5 bg-brand-background rounded">R{match.round} • M{match.matchNumber}</div>
                 <div
-                    className={`text-xs font-bold px-3 py-1 rounded-full ${
-                        isCompleted ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
-                    }`}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isCompleted ? 'bg-green-100 text-green-700' : 'bg-brand-primary text-white'
+                        }`}
                 >
                     {match.status}
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center sm:gap-4 w-full mt-2">
-                {participants.length >= 2 ? (
-                    <>
-                        <div className="flex-1 text-left py-1">
-                            <TeamDisplay team={team1} winnerId={winnerId} matchStatus={match.status} />
-                        </div>
-                        <span className="text-yellow-400 font-bold text-xl mx-2 py-2 sm:py-0">VS</span>
-                        <div className="flex-1 text-left sm:text-right py-1">
-                            <TeamDisplay team={team2} winnerId={winnerId} matchStatus={match.status} />
-                        </div>
-                    </>
-                ) : (
-                    <p className="text-white italic text-center w-full">
-                        Bye or Waiting for Participants ({participants.length}/{expectedPlayers} required)
-                    </p>
-                )}
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                        <TeamDisplay team={team1} winnerId={winnerId} matchStatus={match.status} />
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="h-px flex-1 bg-brand-border opacity-50"></div>
+                    <div className="text-[10px] font-black text-brand-muted italic opacity-40">VS</div>
+                    <div className="h-px flex-1 bg-brand-border opacity-50"></div>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                        <TeamDisplay team={team2} winnerId={winnerId} matchStatus={match.status} />
+                    </div>
+                </div>
             </div>
         </div>
     );
 };
 
-// Tournament Summary
 const TournamentBracket = ({ game, matches }) => {
-    const gameWinnerName = game.winner?.name || 'TBD';
-    const isCompleted = game.status === 'Completed' && game.winner;
+    const gameWinner = game.winner; // This is a User object popualted
+    const isCompleted = game.status === 'Completed' && gameWinner;
 
+    // Find the winning team (could be multiple people if 2v2/4v4)
+    // We look at the final match to find all members of the winning team
     const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => b - a);
     const finalRound = rounds[0];
-    const finalMatch = matches.find(m => m.round === finalRound && m.status === 'Completed');
+    const finalMatch = matches.find(m => m.round === finalRound);
+
+    let winnerNames = gameWinner?.name || 'TBD';
+    if (finalMatch && finalMatch.winner) {
+        const teamSizeMatch = game.matchFormat.match(/^(\d+)v\d+$/);
+        const teamSize = teamSizeMatch ? parseInt(teamSizeMatch[1]) : 1;
+        const winnerIndex = finalMatch.participants.findIndex(p => p._id === finalMatch.winner._id);
+
+        if (winnerIndex !== -1) {
+            const teamStart = Math.floor(winnerIndex / teamSize) * teamSize;
+            const winningTeam = finalMatch.participants.slice(teamStart, teamStart + teamSize);
+            winnerNames = winningTeam.map(p => p.name).join(' & ');
+        }
+    }
 
     return (
-        <div className="p-4 bg-gray-700 rounded-2xl">
-            <h3 className="text-xl font-bold mb-4 text-indigo-300 border-b border-gray-600 pb-2">Tournament Summary</h3>
+        <div className="p-8 bg-brand-surface rounded-3xl border border-brand shadow-sm">
+            <h3 className="text-lg font-black mb-6 text-brand-text uppercase tracking-tight">Tournament Summary</h3>
 
             {isCompleted ? (
-                <div className="text-center p-6 bg-gray-600 rounded-lg shadow-inner">
-                    <Trophy className="w-12 h-12 text-yellow-500 mx-auto mb-3 animate-pulse" />
-                    <p className="text-xl text-gray-300">Champion</p>
-                    <p className="text-4xl font-extrabold text-yellow-300 mt-1">{gameWinnerName}</p>
-                    <p className="text-sm text-gray-400 mt-2">({game.matchFormat} Winner)</p>
+                <div className="text-center p-10 bg-brand-background rounded-2xl border border-brand-primary/20 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-brand-primary shadow-[0_0_15px_rgba(79,70,229,0.5)]"></div>
+                    <Trophy className="w-16 h-16 text-brand-accent mx-auto mb-4 animate-pulse" />
+                    <p className="text-sm font-bold text-brand-muted uppercase tracking-widest">Champion</p>
+                    <p className="text-3xl font-black text-brand-primary mt-2 leading-tight">{winnerNames}</p>
+                    <p className="text-xs text-brand-muted mt-4 font-medium italic">Congratulations on the victory!</p>
                 </div>
             ) : (
-                <p className="text-gray-400 italic text-center p-4">Tournament is ongoing. Final result pending.</p>
-            )}
-
-            {finalMatch && finalRound > 1 && (
-                <div className="mt-6 border-t border-gray-600 pt-4">
-                    <p className="text-lg font-semibold text-gray-300 flex items-center mb-3">
-                        <ArrowRight className="w-5 h-5 mr-2 text-indigo-400" />
-                        Final Match (Round {finalRound})
-                    </p>
-                    <MatchCard match={finalMatch} index={0} matchFormat={game.matchFormat} />
+                <div className="p-10 text-center bg-brand-background rounded-2xl border border-dashed border-brand">
+                    <Zap className="w-10 h-10 text-brand-muted mx-auto mb-4 opacity-20" />
+                    <p className="text-brand-muted font-medium italic">The tournament is currently in progress.</p>
                 </div>
             )}
         </div>
@@ -137,78 +148,40 @@ const App = ({ params }) => {
     const [error, setError] = useState(null);
 
     const { id: gameId } = params;
-    const apiEndpoint = `/api/tournament/${gameId}`;
 
     useEffect(() => {
         const fetchGameDetails = async () => {
             setLoading(true);
-            setError(null);
-
-            for (let i = 0; i < 3; i++) {
-                try {
-                    const response = await fetch(apiEndpoint,{ cache: 'no-store' });
-
-                    if (!response.ok) {
-                        const errorBody = await response.json().catch(() => ({ message: 'Unknown server error.' }));
-                        throw new Error(
-                            `Failed to fetch game data: ${response.status} - ${
-                                errorBody.error || errorBody.message || 'Server responded with an error.'
-                            }`
-                        );
-                    }
-
-                    const result = await response.json();
-
-                    if (!result.data?.game) throw new Error('API returned successfully but missing "game" object.');
-
+            try {
+                const response = await fetch(`/api/tournament/${gameId}`);
+                const result = await response.json();
+                if (result.success) {
                     setGameData(result.data.game);
                     setMatches(result.data.matches || []);
-
-                    setLoading(false);
-                    return;
-                } catch (err) {
-                    if (i < 2) {
-                        const delay = Math.pow(2, i) * 1000;
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    } else {
-                        setError(`Error fetching data from ${apiEndpoint}: ${err.message}`);
-                    }
-                }
-            }
-            setLoading(false);
+                } else throw new Error(result.error);
+            } catch (err) { setError(err.message); }
+            finally { setLoading(false); }
         };
-
         fetchGameDetails();
-    }, [gameId, apiEndpoint]);
+    }, [gameId]);
 
-    if (loading)
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-400 mr-3" />
-                <p>Loading tournament details...</p>
-            </div>
-        );
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-brand-background">
+            <Loader2 className="w-10 h-10 animate-spin text-brand-primary" />
+        </div>
+    );
 
-    if (error)
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4 sm:p-8">
-                <div className="bg-red-800/80 p-6 rounded-xl text-white max-w-lg shadow-xl border border-red-500">
-                    <h2 className="text-xl font-bold mb-2 flex items-center">
-                        <AlertTriangle className="w-6 h-6 mr-2" /> API Error
-                    </h2>
-                    <p className="text-sm break-all">{error}</p>
-                    <p className="text-xs text-red-300 mt-4">
-                        Please ensure your Next.js API route for `{apiEndpoint}` is running.
-                    </p>
-                </div>
+    if (error) return (
+        <div className="min-h-screen flex items-center justify-center bg-brand-background p-8">
+            <div className="bg-white p-8 rounded-3xl text-brand-text max-w-lg shadow-xl border border-red-200">
+                <div className="p-3 bg-red-100 rounded-2xl text-red-600 w-fit mb-4"><AlertTriangle /></div>
+                <h2 className="text-2xl font-black mb-2">Something went wrong</h2>
+                <p className="text-brand-muted text-sm">{error}</p>
             </div>
-        );
+        </div>
+    );
 
     if (!gameData) return null;
-
-    const startDate = gameData.scheduledTime ? new Date(gameData.scheduledTime).toLocaleString() : 'TBD';
-    const registeredPlayers = gameData.registeredPlayers || [];
-    const matchFormat = gameData.matchFormat || '1v1';
 
     const roundsMap = matches.reduce((acc, match) => {
         (acc[match.round] = acc[match.round] || []).push(match);
@@ -216,90 +189,66 @@ const App = ({ params }) => {
     }, {});
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8 font-sans">
-            <div className="max-w-5xl mx-auto">
-                <header className="py-6 border-b border-gray-700 mb-8">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">
-                        {gameData.name || 'Tournament Details'}
-                    </h1>
-
-                    <p className="mt-2 text-xl text-gray-400 flex items-center">
-                        <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
-                        Format: <span className="font-mono text-lg ml-2 capitalize">{matchFormat}</span>
-                    </p>
-
-                    <p className="mt-1 text-sm text-gray-500 flex items-center">
-                        <LinkIcon className="w-4 h-4 mr-1 text-gray-500" />
-                        API Endpoint: {apiEndpoint}
-                    </p>
+        <div className="min-h-screen bg-brand-background text-brand-text p-4 sm:p-8">
+            <div className="max-w-6xl mx-auto">
+                <header className="py-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div>
+                        <a href="/" className="text-brand-primary font-bold text-xs uppercase tracking-widest hover:underline mb-4 block">← Back to Tournaments</a>
+                        <h1 className="text-5xl font-black tracking-tighter leading-none">{gameData.name}</h1>
+                        <p className="mt-4 text-brand-muted text-lg font-medium flex items-center gap-2">
+                            <Trophy className="w-5 h-5 text-brand-accent" />
+                            Format: <span className="font-bold text-brand-text uppercase">{gameData.matchFormat}</span>
+                        </p>
+                    </div>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    <StatCard icon={Zap} title="Status" value={gameData.status || 'Unknown'} />
-                    <StatCard icon={Calendar} title="Start Time" value={startDate} />
-                    <StatCard icon={Users} title="Registered Players" value={registeredPlayers.length} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <StatCard icon={Zap} title="Current Status" value={gameData.status} />
+                    <StatCard icon={Calendar} title="Start Time" value={new Date(gameData.scheduledTime).toLocaleString()} />
+                    <StatCard icon={Users} title="Participants" value={gameData.registeredPlayers?.length || 0} />
                 </div>
 
-                <section className="mb-10">
-                    <TournamentBracket game={gameData} matches={matches} />
-                </section>
-
-                <section className="bg-gray-800 p-6 rounded-2xl shadow-2xl mb-10">
-                    <h2 className="text-2xl font-bold mb-4 border-b border-indigo-500/50 pb-2">
-                        Participating Players
-                    </h2>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {registeredPlayers.length > 0 ? (
-                            registeredPlayers.map((player, index) => (
-                                <div
-                                    key={player._id || index}
-                                    className="flex items-center p-3 bg-gray-700 rounded-lg transition duration-150 hover:bg-gray-600"
-                                >
-                                    <div className="text-lg font-mono text-gray-400 w-8 flex-shrink-0">
-                                        {index + 1}.
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div className="lg:col-span-8 space-y-8">
+                        <section className="bg-brand-surface p-8 rounded-3xl shadow-sm border border-brand">
+                            <h2 className="text-2xl font-black mb-6 flex items-center gap-4">
+                                Match <span className="text-brand-primary">Bracket</span>
+                                <div className="h-px flex-1 bg-brand-border"></div>
+                            </h2>
+                            {Object.keys(roundsMap).length > 0 ? (
+                                Object.keys(roundsMap).sort((a, b) => a - b).map(round => (
+                                    <div key={round} className="mb-10 last:mb-0">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold text-sm">{round}</div>
+                                            <h3 className="text-lg font-black uppercase tracking-tight">Round {round}</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {roundsMap[round].map(match => (
+                                                <MatchCard key={match._id} match={match} matchFormat={gameData.matchFormat} />
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="ml-3 truncate">
-                                        <p className="text-lg font-semibold text-white truncate">
-                                            {player.name || 'Name Missing'}
-                                        </p>
-                                        <p className="text-xs text-gray-400 truncate mt-1">
-                                            User ID: {player._id || 'Unknown ID'}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-gray-400 italic col-span-2">No players registered yet.</p>
-                        )}
+                                ))
+                            ) : <p className="text-brand-muted italic">No matches generated yet.</p>}
+                        </section>
                     </div>
-                </section>
 
-                <section className="bg-gray-800 p-6 rounded-2xl shadow-2xl">
-                    <h2 className="text-2xl font-bold mb-4 border-b border-purple-500/50 pb-2">
-                        Tournament Matches
-                    </h2>
+                    <div className="lg:col-span-4 space-y-8">
+                        <TournamentBracket game={gameData} matches={matches} />
 
-                    {Object.keys(roundsMap).length > 0 ? (
-                        Object.keys(roundsMap)
-                            .sort((a, b) => parseInt(a) - parseInt(b))
-                            .map(round => (
-                                <div key={round} className="mb-6">
-                                    <h3 className="text-xl font-semibold mb-3 text-indigo-400">Round {round}</h3>
-                                    {roundsMap[round].map((match, idx) => (
-                                        <MatchCard
-                                            key={match._id || idx}
-                                            match={match}
-                                            index={idx}
-                                            matchFormat={matchFormat}
-                                        />
-                                    ))}
-                                </div>
-                            ))
-                    ) : (
-                        <p className="text-gray-400 italic">No matches scheduled yet.</p>
-                    )}
-                </section>
+                        <section className="bg-brand-surface p-8 rounded-3xl shadow-sm border border-brand">
+                            <h2 className="text-lg font-black mb-6 uppercase tracking-tight">Players</h2>
+                            <div className="space-y-4">
+                                {gameData.registeredPlayers?.map((player, idx) => (
+                                    <div key={player._id} className="flex items-center gap-3 p-3 bg-brand-background rounded-xl border border-brand">
+                                        <div className="w-6 h-6 flex-shrink-0 bg-brand-surface border border-brand rounded flex items-center justify-center text-[10px] font-bold text-brand-muted">{idx + 1}</div>
+                                        <p className="font-bold text-sm truncate">{player.name}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    </div>
+                </div>
             </div>
         </div>
     );

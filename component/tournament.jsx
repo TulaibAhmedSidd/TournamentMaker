@@ -7,133 +7,90 @@ import { useRouter } from 'next/navigation';
 
 const TournamentCard = ({ tournament, onSelect }) => {
   const startDate = tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'TBD';
-  
+
   return (
     <div
-      style={{padding:'16px'}} 
-      className="bg-gray-800 p-5 rounded-xl shadow-lg border border-gray-700 hover:border-indigo-500 transition duration-300 cursor-pointer flex flex-col justify-between"
+      className="bg-brand-surface p-6 rounded-2xl shadow-sm border border-brand hover:border-brand-primary transition-all duration-300 cursor-pointer flex flex-col justify-between group"
       onClick={() => onSelect(tournament._id)}
     >
       <div>
-        <h3 className="text-xl font-bold text-white mb-2 flex items-center">
-          <Trophy className="w-5 h-5 text-yellow-500 mr-2"/>
+        <div className="flex justify-between items-start mb-4">
+          <div className="p-3 rounded-xl bg-brand-background text-brand-primary group-hover:bg-brand-primary group-hover:text-white transition-colors">
+            <Trophy className="w-6 h-6" />
+          </div>
+          <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${tournament.status === 'Active' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{tournament.status}</span>
+        </div>
+        <h3 className="text-xl font-bold text-brand-text mb-3 leading-tight">
           {tournament.name}
         </h3>
-        <div className="space-y-2 text-gray-400 text-sm">
-          <p className="flex items-center">
-            <Calendar className="w-4 h-4 mr-2 text-indigo-400"/>
-            Start: {startDate}
+        <div className="space-y-2 text-brand-muted text-sm">
+          <p className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-brand-primary" />
+            Starts: {startDate}
           </p>
-          <p className="flex items-center">
-            <Users className="w-4 h-4 mr-2 text-green-400"/>
-            Players: {tournament.playerCount}
-          </p>
-          <p className="flex items-center">
-            <Zap className="w-4 h-4 mr-2 text-red-400"/>
-            Status: {tournament.status || 'Pending'}
+          <p className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-brand-secondary" />
+            Participants: {tournament.playerCount}
           </p>
         </div>
       </div>
-      <div className="mt-4 pt-3 border-t border-gray-700 flex justify-end">
-        <span className="text-indigo-400 flex items-center font-medium">
-          View Details <ArrowRight className="w-4 h-4 ml-1"/>
+      <div className="mt-6 pt-4 border-t border-brand flex justify-between items-center">
+        <span className="text-brand-primary text-sm font-bold flex items-center group-hover:gap-2 transition-all">
+          Details <ArrowRight className="w-4 h-4 ml-1" />
         </span>
       </div>
     </div>
   );
 };
 
-
-// --- Main Component ---
-
 const TournamentListApp = () => {
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  const apiEndpoint = '/api/tournament'; 
-  const router = useRouter()
+  const router = useRouter();
 
-  console.log("tournaments",tournaments)
   useEffect(() => {
     const fetchTournaments = async () => {
       setLoading(true);
-      setError(null);
-      
       try {
-        const response = await fetch(apiEndpoint);
-        
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({ message: 'Unknown server error.' }));
-          throw new Error(`Failed to fetch tournaments: ${response.status} - ${errorBody.message || 'Server error.'}`);
-        }
-
+        const response = await fetch('/api/tournament');
         const result = await response.json();
-        
-        if (result.tournaments || result.data.tournaments) {
-          setTournaments(result.tournaments || result.data.tournaments);
-        } else {
-          setError('API returned successfully but missing "tournaments" array.');
-        }
-
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError(`An error occurred while fetching data from ${apiEndpoint}: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
+        if (result.success) setTournaments(result.tournaments);
+        else throw new Error(result.error);
+      } catch (err) { setError(err.message); }
+      finally { setLoading(false); }
     };
-
     fetchTournaments();
-  }, [apiEndpoint]);
+  }, []);
 
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-400 mr-3" />
-        <p>Loading tournament list...</p>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 p-8">
-        <div className="bg-red-800/80 p-6 rounded-xl text-white max-w-lg shadow-xl border border-red-500">
-          <h2 className="text-xl font-bold mb-2">API Error</h2>
-          <p className="text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-brand-background">
+      <Loader2 className="w-10 h-10 animate-spin text-brand-primary" />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8 font-sans">
-      <div className="max-w-4xl mx-auto">
-        
-        {/* Header Section */}
-        <header className="py-6 border-b border-gray-700 mb-8">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">
-            Available Tournaments
+    <div className="min-h-screen bg-brand-background text-brand-text p-4 sm:p-8">
+      <div className="max-w-6xl mx-auto">
+        <header className="py-12 text-center">
+          <h1 className="text-5xl font-black tracking-tight mb-4">
+            Active <span className="text-brand-primary">Tournaments</span>
           </h1>
-          <p className="mt-2 text-xl text-gray-400 flex items-center">
-            <List className="w-5 h-5 mr-2 text-purple-400"/> 
-            Select a tournament to view details.
+          <p className="text-brand-muted text-lg max-w-xl mx-auto">
+            Join the competition and test your skills. Select a tournament below to view the current bracket and results.
           </p>
         </header>
 
-        {/* Tournament Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {tournaments?.length > 0 ? (
-            tournaments?.map(tournament => (
-              <TournamentCard 
-                key={tournament._id} 
-                tournament={tournament} 
-                onSelect={(tournamentID)=>{router.push(`/tournament/${tournamentID}`)}} 
-              />
+            tournaments.map(t => (
+              <TournamentCard key={t._id} tournament={t} onSelect={id => router.push(`/tournament/${id}`)} />
             ))
           ) : (
-            <p className="text-gray-400 italic col-span-3">No tournaments found.</p>
+            <div className="col-span-full py-20 text-center border-2 border-dashed border-brand rounded-3xl">
+              <Trophy className="w-12 h-12 text-brand-muted mx-auto mb-4 opacity-20" />
+              <p className="text-brand-muted italic">No tournaments are currently scheduled.</p>
+            </div>
           )}
         </div>
       </div>

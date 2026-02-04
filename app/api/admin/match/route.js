@@ -2,6 +2,8 @@ import dbConnect from '@/app/lib/db';
 import Match from '@/app/models/Match';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/admin/match - Get all matches that are active or scheduled
 export async function GET() {
   await dbConnect();
