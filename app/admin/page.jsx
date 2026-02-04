@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trophy, Users, CheckCircle, Clock, Loader2 } from 'lucide-react';
+import { Trophy, Users, CheckCircle, Clock, Loader2, Zap } from 'lucide-react';
 import StatCard from '@/component/admin/StatCard';
 import { apiCall, ActiveMatchList } from '@/component/admin/AdminShared';
 
@@ -63,8 +63,8 @@ export default function Dashboard() {
                                     </p>
                                 </div>
                                 <span className={`px-4 py-1.5 text-[10px] font-black rounded-xl uppercase tracking-widest shadow-sm ${game.status === 'Active' ? 'bg-brand-primary text-white shadow-brand-primary/20' :
-                                        game.status === 'Completed' ? 'bg-green-500 text-white shadow-green-500/20' :
-                                            'bg-brand-surface text-brand-muted border border-brand'
+                                    game.status === 'Completed' ? 'bg-green-500 text-white shadow-green-500/20' :
+                                        'bg-brand-surface text-brand-muted border border-brand'
                                     }`}>
                                     {game.status}
                                 </span>
