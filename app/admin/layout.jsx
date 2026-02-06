@@ -20,43 +20,43 @@ export default function AdminLayout({ children }) {
         }
     };
 
-    useEffect(() => {
-        const checkAuthStatus = async () => {
-            try {
-                const response = await fetch('/api/tournament/winners', { cache: 'no-store' });
-                if (response.ok) {
-                    setIsAdmin(true);
-                    if (typeof window !== 'undefined') {
-                        const user = localStorage.getItem('user');
-                        setUserlocal(user ? JSON.parse(user) : null);
-                    }
-                } else if (response.status === 401 || response.status === 403) {
-                    setIsAdmin(false);
-                    window.location.href = '/admin/login';
-                } else {
-                    setIsAdmin(false);
-                    setError("Server error during initial auth check.");
-                }
-            } catch (err) {
-                setIsAdmin(false);
-                window.location.href = '/admin/login';
-            }
-        };
-        checkAuthStatus();
-    }, []);
+    // useEffect(() => {
+    //     const checkAuthStatus = async () => {
+    //         try {
+    //             const response = await fetch('/api/tournament/winners', { cache: 'no-store' });
+    //             if (response.ok) {
+    //                 setIsAdmin(true);
+    //                 if (typeof window !== 'undefined') {
+    //                     const user = localStorage.getItem('user');
+    //                     setUserlocal(user ? JSON.parse(user) : null);
+    //                 }
+    //             } else if (response.status === 401 || response.status === 403) {
+    //                 setIsAdmin(false);
+    //                 window.location.href = '/admin/login';
+    //             } else {
+    //                 setIsAdmin(false);
+    //                 setError("Server error during initial auth check.");
+    //             }
+    //         } catch (err) {
+    //             setIsAdmin(false);
+    //             window.location.href = '/admin/login';
+    //         }
+    //     };
+    //     checkAuthStatus();
+    // }, []);
 
-    if (isAdmin === null) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-            </div>
-        );
-    }
+    // if (isAdmin === null) {
+    //     return (
+    //         <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    //             <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+    //         </div>
+    //     );
+    // }
 
     return (
         <div className="min-h-screen bg-brand-background p-4 sm:p-8">
             <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-8 flex-wrap">
-                <AdminSidebar logout={logout} />
+                {isAdmin === null ? "" :<AdminSidebar logout={logout} />}
                 <main className="flex-1 min-w-0">
                     <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-brand-surface rounded-2xl border border-brand shadow-sm">
                         <div>
